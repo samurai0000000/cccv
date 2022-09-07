@@ -18,9 +18,11 @@ public:
 
     void enableGUI(int enable);
     void setFileSource(const char *filename);
-    int loop(void) const;
+    int loop(void);
 
 private:
+
+    void processFrame(cv::Mat &frame, unsigned int index);
 
     int _use_gui;
     struct termios _t_old;

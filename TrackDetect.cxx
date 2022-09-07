@@ -4,6 +4,9 @@
  * Copyright (C) 2022, Charles Chiou
  */
 
+#include <unistd.h>
+#include <stdio.h>
+#include <sys/select.h>
 #include <iostream>
 #include <opencv2/objdetect.hpp>
 #include <opencv2/highgui.hpp>
@@ -71,14 +74,38 @@ void TrackDetect::setFileSource(const char *filename)
     }
 }
 
-int TrackDetect::loop(void) const
+int TrackDetect::loop(void)
 {
-    int key;
+    int key = 0;
+    unsigned int timeout_ms = _vc ? 0 : 50;
 
     if (_use_gui) {
-        key = cv::waitKey(5);
+        if (timeout_ms == 0) {
+#if 0
+            key = cv::pollKey();
+#else
+            key = cv::waitKey(1);
+#endif
+        } else {
+            key = cv::waitKey(timeout_ms);
+        }
     } else {
-        key = getchar();
+        int nfds;
+        fd_set readfds;
+        struct timeval timeout = {
+            .tv_sec = 0,
+            .tv_usec = timeout_ms * 1000,
+        };
+
+        FD_ZERO(&readfds);
+        FD_SET(STDIN_FILENO, &readfds);
+        nfds = STDIN_FILENO + 1;
+
+        select(nfds, &readfds, NULL, NULL, &timeout);
+
+        if (FD_ISSET(STDIN_FILENO, &readfds)) {
+            key = getchar();
+        }
     }
 
     if (key == 'q') {
@@ -87,9 +114,10 @@ int TrackDetect::loop(void) const
 
     if (_vc) {
         Mat frame;
+        unsigned index;
 
         *_vc >> frame;
-        cout << "frame " << _vc->get(cv::CAP_PROP_POS_FRAMES) << endl;
+        index = _vc->get(cv::CAP_PROP_POS_FRAMES);
 
         if (_use_gui) {
             if (cv::getWindowProperty("cccv", WND_PROP_AUTOSIZE) == -1) {
@@ -98,9 +126,22 @@ int TrackDetect::loop(void) const
                 cv::imshow("cccv", frame);
             }
         }
+
+        processFrame(frame, index);
+
+        if (index == _vc->get(cv::CAP_PROP_FRAME_COUNT)) {
+            delete _vc;
+            _vc = NULL;
+        }
     }
 
     return 0;
+}
+
+void TrackDetect::processFrame(cv::Mat &frame, unsigned index)
+{
+    (void)(frame);
+    cout << "frame " << index << endl;
 }
 
 /*
