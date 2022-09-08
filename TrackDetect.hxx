@@ -27,6 +27,8 @@ private:
     int _use_gui;
     struct termios _t_old;
     cv::VideoCapture *_vc;
+    unsigned int _width;
+    unsigned int _height;
 
 };
 

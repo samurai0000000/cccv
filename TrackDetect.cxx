@@ -52,6 +52,8 @@ void TrackDetect::enableGUI(int enable)
 void TrackDetect::setFileSource(const char *filename)
 {
     int frames;
+    int width;
+    int height;
 
     if (filename == NULL)
         return;
@@ -72,6 +74,16 @@ void TrackDetect::setFileSource(const char *filename)
             cout << filename << " has " << frames << " frames" << endl;
         }
     }
+
+    // Set rescaled width/height
+    width = _vc->get(cv::CAP_PROP_FRAME_WIDTH);
+    height = _vc->get(cv::CAP_PROP_FRAME_HEIGHT);
+    if (width > 250) {
+        double scale;
+        _width = 250;
+        scale = ((double) _width) / ((double) width);
+        _height = (int) ((double) height * scale);
+    }
 }
 
 int TrackDetect::loop(void)
@@ -88,6 +100,10 @@ int TrackDetect::loop(void)
 #endif
         } else {
             key = cv::waitKey(timeout_ms);
+        }
+
+        if (cv::getWindowProperty("cccv", WND_PROP_AUTOSIZE) == -1) {
+            return 1;
         }
     } else {
         int nfds;
@@ -119,14 +135,6 @@ int TrackDetect::loop(void)
         *_vc >> frame;
         index = _vc->get(cv::CAP_PROP_POS_FRAMES);
 
-        if (_use_gui) {
-            if (cv::getWindowProperty("cccv", WND_PROP_AUTOSIZE) == -1) {
-                return 1;
-            } else {
-                cv::imshow("cccv", frame);
-            }
-        }
-
         processFrame(frame, index);
 
         if (index == _vc->get(cv::CAP_PROP_FRAME_COUNT)) {
@@ -140,8 +148,15 @@ int TrackDetect::loop(void)
 
 void TrackDetect::processFrame(cv::Mat &frame, unsigned index)
 {
-    (void)(frame);
     cout << "frame " << index << endl;
+    // Down-sample
+    cv::resize(frame, frame, cv::Size(_width, _height));
+    // Convert to gray-scale
+    cv::cvtColor(frame, frame, cv::COLOR_RGB2GRAY);
+
+    if (_use_gui) {
+        cv::imshow("cccv", frame);
+    }
 }
 
 /*
