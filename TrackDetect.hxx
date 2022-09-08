@@ -9,6 +9,9 @@
 
 #include <termios.h>
 
+using namespace std;
+using namespace cv;
+
 class TrackDetect {
 
 public:
@@ -26,9 +29,10 @@ private:
 
     int _use_gui;
     struct termios _t_old;
-    cv::VideoCapture *_vc;
+    VideoCapture *_vc;
     unsigned int _width;
     unsigned int _height;
+    Ptr<BackgroundSubtractorMOG2> _backsub;
 
 };
 

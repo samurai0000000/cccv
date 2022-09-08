@@ -6,16 +6,15 @@
 
 #include <unistd.h>
 #include <stdio.h>
+#include <stdarg.h>
 #include <sys/select.h>
 #include <iostream>
 #include <opencv2/objdetect.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/videoio.hpp>
+#include <opencv2/video/background_segm.hpp>
 #include "TrackDetect.hxx"
-
-using namespace std;
-using namespace cv;
 
 TrackDetect::TrackDetect()
 {
@@ -27,6 +26,9 @@ TrackDetect::TrackDetect()
     t_new = _t_old;
     t_new.c_lflag &= (tcflag_t) ~(ICANON | ECHO);
     tcsetattr(fileno(stdin), TCSANOW, &t_new);
+
+    _backsub = cv::createBackgroundSubtractorMOG2();
+    _backsub->setVarThreshold(30.0);
 }
 
 TrackDetect::~TrackDetect()
@@ -150,14 +152,22 @@ int TrackDetect::loop(void)
 
 void TrackDetect::processFrame(cv::Mat &frame, unsigned index)
 {
+    Mat procframe;
+
     cout << "frame " << index << endl;
     // Down-sample
     cv::resize(frame, frame, cv::Size(_width, _height));
     // Convert to gray-scale
-    cv::cvtColor(frame, frame, cv::COLOR_RGB2GRAY);
+    cv::cvtColor(frame, procframe, cv::COLOR_RGB2GRAY);
+    // Filter background using MOG2 subtractor
+    _backsub->apply(procframe, procframe);
 
     if (_use_gui) {
-        cv::imshow("cccv", frame);
+        Mat outframe;
+
+        cv::cvtColor(procframe, procframe, cv::COLOR_GRAY2RGB);
+        cv::hconcat(frame, procframe, outframe);
+        cv::imshow("cccv", outframe);
     }
 }
 
