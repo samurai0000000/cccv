@@ -126,6 +126,8 @@ int TrackDetect::loop(void)
 
     if (key == 'q') {
         return 1;
+    } else if (key == 'r' && _vc) {
+        _vc->set(cv::CAP_PROP_POS_FRAMES, 0);
     }
 
     if (_vc) {
